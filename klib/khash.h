@@ -130,6 +130,10 @@ typedef signed long long khint64_t;
 
 typedef double khfloat64_t;
 
+typedef struct {
+    khint64_t a, b;
+} int64pair_t;
+
 #ifndef PANDAS_INLINE
   #if defined(__GNUC__)
     #define PANDAS_INLINE __inline__
@@ -349,6 +353,12 @@ static const double __ac_HASH_UPPER = 0.77;
  */
 #define kh_int64_hash_equal(a, b) ((a) == (b))
 
+#define kh_int64pair_hash_func(key) (khint32_t)((key.a)>>33^(key.a)^(key.a)<<11^(key.b)>>33^(key.b)^(key.b)<<11)
+/*! @function
+  @abstract     64-bit integer comparison function
+ */
+#define kh_int64pair_hash_equal(p1, p2) ((p1.a) == (p2.a) && (p1.b) == (p2.b))
+
 /*! @function
   @abstract     const char* hash function
   @param  s     Pointer to a null terminated string
@@ -548,31 +558,28 @@ static PANDAS_INLINE khint_t __ac_Wang_hash(khint_t key)
 	KHASH_INIT(name, khint64_t, khval_t, 1, kh_int64_hash_func, kh_int64_hash_equal)
 
 
-typedef const char *kh_cstr_t;
 /*! @function
-  @abstract     Instantiate a hash map containing const char* keys
+  @abstract     Instantiate a hash map containing pairs of 64-bit integer keys
   @param  name  Name of the hash table [symbol]
  */
-#define KHASH_SET_INIT_STR(name)										\
-	KHASH_INIT(name, kh_cstr_t, char, 0, kh_str_hash_func, kh_str_hash_equal)
+#define KHASH_SET_INIT_INT64PAIR(name)										\
+	KHASH_INIT(name, int64pair_t, char, 0, kh_int64pair_hash_func, kh_int64pair_hash_equal)
 
 /*! @function
-  @abstract     Instantiate a hash map containing const char* keys
+  @abstract     Instantiate a hash map containing pairs of 64-bit integer keys
   @param  name  Name of the hash table [symbol]
   @param  khval_t  Type of values [type]
  */
-#define KHASH_MAP_INIT_STR(name, khval_t)								\
-	KHASH_INIT(name, kh_cstr_t, khval_t, 1, kh_str_hash_func, kh_str_hash_equal)
+#define KHASH_MAP_INIT_INT64PAIR(name, khval_t)								\
+	KHASH_INIT(name, int64pair_t, khval_t, 1, kh_int64pair_hash_func, kh_int64pair_hash_equal)
 
 
-#define kh_exist_str(h, k) (kh_exist(h, k))
-#define kh_exist_float64(h, k) (kh_exist(h, k))
 #define kh_exist_int64(h, k) (kh_exist(h, k))
 #define kh_exist_int32(h, k) (kh_exist(h, k))
+#define kh_exist_int64pair(h, k) (kh_exist(h, k))
 
-KHASH_MAP_INIT_STR(str, size_t)
 KHASH_MAP_INIT_INT(int32, size_t)
 KHASH_MAP_INIT_INT64(int64, size_t)
-
+KHASH_MAP_INIT_INT64PAIR(int64pair, size_t)
 
 #endif /* __AC_KHASH_H */

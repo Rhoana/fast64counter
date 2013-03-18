@@ -104,3 +104,67 @@ cdef class ValueCountInt64:
                 result_counts[i] = self.table.vals[k]
                 i += 1
         return result_keys_hi, result_keys_lo, result_counts
+
+cdef class ValueCountPair64:
+    cdef kh_int64pair_t *table
+
+    def __cinit__(self):
+        self.table = kh_init_int64pair()
+
+    def __dealloc__(self):
+        kh_destroy_int64pair(self.table)
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cpdef add_values_pair(self, ndarray[int64_t] first, ndarray[int64_t] second):
+        cdef:
+            int64pair_t val
+            Py_ssize_t i, k, n = len(first)
+            int ret = 0
+
+        assert len(first) == len(second)
+        for i in range(n):
+            val.a = first[i]
+            val.b = second[i]
+            k = kh_get_int64pair(self.table, val)
+            if k != self.table.n_buckets:
+                self.table.vals[k] += 1
+            else:
+                k = kh_put_int64pair(self.table, val, &ret)
+                self.table.vals[k] = 1
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cpdef add_values_pair32(self, ndarray[int32_t] first, ndarray[int32_t] second):
+        cdef:
+            int64pair_t val
+            Py_ssize_t i, k, n = len(first)
+            int ret = 0
+
+        assert len(first) == len(second)
+        for i in range(n):
+            val.a = first[i]
+            val.b = second[i]
+            k = kh_get_int64pair(self.table, val)
+            if k != self.table.n_buckets:
+                self.table.vals[k] += 1
+            else:
+                k = kh_put_int64pair(self.table, val, &ret)
+                self.table.vals[k] = 1
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cpdef get_counts(self):
+        cdef:
+            Py_ssize_t k, i = 0
+            ndarray[int64_t] result_first_keys, result_second_keys, result_counts
+        result_first_keys = np.empty(self.table.n_occupied, dtype=np.int64)
+        result_second_keys = np.empty(self.table.n_occupied, dtype=np.int64)
+        result_counts = np.zeros(self.table.n_occupied, dtype=np.int64)
+        for k in range(self.table.n_buckets):
+            if kh_exist_int64pair(self.table, k):
+                result_first_keys[i] = self.table.keys[k].a
+                result_second_keys[i] = self.table.keys[k].b
+                result_counts[i] = self.table.vals[k]
+                i += 1
+        return result_first_keys, result_second_keys, result_counts
