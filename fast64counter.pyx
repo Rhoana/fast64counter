@@ -9,6 +9,10 @@ cimport numpy as cnp
 cnp.import_array()
 cnp.import_ufunc()
 
+ctypedef fused f_int64:
+    int64_t
+    uint64_t
+
 cdef class ValueCountInt64:
     cdef kh_int64_t *table
 
@@ -20,12 +24,14 @@ cdef class ValueCountInt64:
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    cpdef add_values(self, ndarray[int64_t] values):
+    cpdef add_values(self, ndarray[f_int64] values):
         cdef:
             int64_t val
             Py_ssize_t i, k, n = len(values)
             int ret = 0
+            ndarray[int64_t] _values
 
+        _values = values.view(dtype=np.int64)
         for i in range(n):
             val = values[i]
             k = kh_get_int64(self.table, val)
@@ -116,16 +122,21 @@ cdef class ValueCountPair64:
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    cpdef add_values_pair(self, ndarray[int64_t] first, ndarray[int64_t] second):
+    cpdef add_values_pair(self, ndarray[f_int64] first, ndarray[f_int64] second):
         cdef:
             int64pair_t val
             Py_ssize_t i, k, n = len(first)
             int ret = 0
+            ndarray[int64_t] _first
+            ndarray[int64_t] _second
 
         assert len(first) == len(second)
+        _first = first.view(dtype=np.int64)
+        _second = second.view(dtype=np.int64)
+
         for i in range(n):
-            val.a = first[i]
-            val.b = second[i]
+            val.a = _first[i]
+            val.b = _second[i]
             k = kh_get_int64pair(self.table, val)
             if k != self.table.n_buckets:
                 self.table.vals[k] += 1
