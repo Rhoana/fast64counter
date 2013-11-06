@@ -106,7 +106,7 @@ cdef class ValueCountInt64:
             if kh_exist_int64(self.table, k):
                 result_key = self.table.keys[k]
                 result_keys_hi[i] = (result_key >> 32)
-                result_keys_lo[i] = (result_key & <int32_t> 0x7fffffff)
+                result_keys_lo[i] = (result_key & <int32_t> 0xffffffff)
                 result_counts[i] = self.table.vals[k]
                 i += 1
         return result_keys_hi, result_keys_lo, result_counts
