@@ -577,9 +577,11 @@ static PANDAS_INLINE khint_t __ac_Wang_hash(khint_t key)
 #define kh_exist_int64(h, k) (kh_exist(h, k))
 #define kh_exist_int32(h, k) (kh_exist(h, k))
 #define kh_exist_int64pair(h, k) (kh_exist(h, k))
+#define kh_exist_int64_weighted(h, k) (kh_exist(h, k))
 
 KHASH_MAP_INIT_INT(int32, size_t)
 KHASH_MAP_INIT_INT64(int64, size_t)
 KHASH_MAP_INIT_INT64PAIR(int64pair, size_t)
+KHASH_MAP_INIT_INT64(int64_weighted, float)
 
 #endif /* __AC_KHASH_H */

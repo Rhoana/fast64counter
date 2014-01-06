@@ -179,3 +179,102 @@ cdef class ValueCountPair64:
                 result_counts[i] = self.table.vals[k]
                 i += 1
         return result_first_keys, result_second_keys, result_counts
+
+cdef class WeightedCountInt64:
+    cdef kh_int64_weighted_t *table
+
+    def __cinit__(self):
+        self.table = kh_init_int64_weighted()
+
+    def __dealloc__(self):
+        kh_destroy_int64_weighted(self.table)
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cpdef add_values(self, ndarray[f_int64] values, ndarray[float32_t] weights):
+        cdef:
+            int64_t val
+            Py_ssize_t i, k, n = len(values)
+            int ret = 0
+            ndarray[int64_t] _values
+
+        _values = values.view(dtype=np.int64)
+        for i in range(n):
+            val = values[i]
+            k = kh_get_int64_weighted(self.table, val)
+            if k != self.table.n_buckets:
+                self.table.vals[k] += weights[i]
+            else:
+                k = kh_put_int64_weighted(self.table, val, &ret)
+                self.table.vals[k] = weights[i]
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cpdef add_values_32(self, ndarray[int32_t] values, ndarray[float32_t] weights):
+        cdef:
+            int64_t val
+            Py_ssize_t i, k, n = len(values)
+            int ret = 0
+
+        for i in range(n):
+            val = <int64_t> (values[i])
+            k = kh_get_int64_weighted(self.table, val)
+            if k != self.table.n_buckets:
+                self.table.vals[k] += weights[i]
+            else:
+                k = kh_put_int64_weighted(self.table, val, &ret)
+                self.table.vals[k] = weights[i]
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cpdef add_values_pair32(self, ndarray[int32_t] vhi, ndarray[int32_t] vlo, ndarray[float32_t] weights):
+        cdef:
+            int64_t val
+            Py_ssize_t i, k, n = len(vlo)
+            int ret = 0
+
+        assert len(vlo) == len(vhi)
+        for i in range(n):
+            val = ((<int64_t> vhi[i]) << 32) + (<int64_t> vlo[i])
+            k = kh_get_int64_weighted(self.table, val)
+            if k != self.table.n_buckets:
+                self.table.vals[k] += weights[i]
+            else:
+                k = kh_put_int64_weighted(self.table, val, &ret)
+                self.table.vals[k] = weights[i]
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cpdef get_weights(self):
+        cdef:
+            Py_ssize_t k, i = 0
+            ndarray[int64_t] result_keys
+            ndarray[float32_t] result_weights
+        result_keys = np.empty(self.table.n_occupied, dtype=np.int64)
+        result_weights = np.zeros(self.table.n_occupied, dtype=np.float32)
+        for k in range(self.table.n_buckets):
+            if kh_exist_int64_weighted(self.table, k):
+                result_keys[i] = self.table.keys[k]
+                result_weights[i] = self.table.vals[k]
+                i += 1
+        return result_keys, result_weights
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cpdef get_weights_pair32(self):
+        cdef:
+            Py_ssize_t k, i = 0
+            int64_t result_key
+            ndarray[int32_t] result_keys_hi, result_keys_lo
+            ndarray[float32_t] result_weights
+        result_keys_hi = np.empty(self.table.n_occupied, dtype=np.int32)
+        result_keys_lo = np.empty(self.table.n_occupied, dtype=np.int32)
+        result_weights = np.zeros(self.table.n_occupied, dtype=np.float32)
+        for k in range(self.table.n_buckets):
+            if kh_exist_int64_weighted(self.table, k):
+                result_key = self.table.keys[k]
+                result_keys_hi[i] = (result_key >> 32)
+                result_keys_lo[i] = (result_key & <int32_t> 0xffffffff)
+                result_weights[i] = self.table.vals[k]
+                i += 1
+        return result_keys_hi, result_keys_lo, result_weights
